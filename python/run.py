@@ -43,10 +43,9 @@ def start_ngrok_tunnel() -> str:
             if ngrok_token:
                 ngrok.set_auth_token(ngrok_token, pyngrok_config=pyngrok_config)
 
-            # Close any previous orphaned tunnels
+            # Kill any existing ngrok process for this config to avoid ERR_NGROK_108 agent limits
             try:
-                for t in ngrok.get_tunnels(pyngrok_config=pyngrok_config):
-                    ngrok.disconnect(t.public_url, pyngrok_config=pyngrok_config)
+                ngrok.kill(pyngrok_config=pyngrok_config)
             except Exception:
                 pass
 

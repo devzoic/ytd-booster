@@ -142,16 +142,25 @@ pub async fn start_engine(app_handle: &AppHandle, state: &SidecarState) -> Resul
     println!("[YT Booster] Spawning engine: {} {:?}", cmd_path.display(), args);
     println!("[YT Booster] Working directory: {}", work_dir.display());
 
-    // Clean up any stale process holding the port from previous crashed runs
+    // Clean up any stale process holding the port or ngrok sessions from previous runs
     #[cfg(unix)]
     {
         let _ = StdCommand::new("sh")
             .arg("-c")
-            .arg("lsof -ti :8008 | xargs kill -9 2>/dev/null || true")
+            .arg("killall -9 ngrok 2>/dev/null || pkill -9 -f 'ngrok start' 2>/dev/null || true")
             .output();
         let _ = StdCommand::new("sh")
             .arg("-c")
-            .arg("lsof -ti :8000 | xargs kill -9 2>/dev/null || true")
+            .arg("lsof -ti :8008,:8000 | xargs kill -9 2>/dev/null || true")
+            .output();
+    }
+    #[cfg(windows)]
+    {
+        let _ = StdCommand::new("taskkill")
+            .args(["/F", "/IM", "ngrok.exe", "/T"])
+            .output();
+        let _ = StdCommand::new("cmd")
+            .args(["/C", "for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :8008') do taskkill /f /pid %a >nul 2>&1"])
             .output();
     }
 
@@ -295,6 +304,7 @@ pub async fn stop_engine(app_handle: &AppHandle, state: &SidecarState) -> Result
                 let _ = Command::new("kill").arg("-15").arg(pid.to_string()).output();
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 let _ = Command::new("kill").arg("-9").arg(pid.to_string()).output();
+                let _ = Command::new("sh").arg("-c").arg("killall -9 ngrok 2>/dev/null || pkill -9 -f 'ngrok start' 2>/dev/null || true").output();
                 let _ = Command::new("sh").arg("-c").arg("lsof -ti:8008,8000 | xargs kill -9 2>/dev/null || true").output();
                 // Kill any active automation Chrome instances using profiles_data
                 let _ = Command::new("sh").arg("-c").arg("ps aux | grep -i 'profiles_data' | grep -v grep | awk '{print $2}' | xargs kill -9 2>/dev/null || true").output();
@@ -305,6 +315,9 @@ pub async fn stop_engine(app_handle: &AppHandle, state: &SidecarState) -> Result
                 use std::process::Command;
                 let _ = Command::new("taskkill")
                     .args(["/PID", &pid.to_string(), "/F", "/T"])
+                    .output();
+                let _ = Command::new("taskkill")
+                    .args(["/F", "/IM", "ngrok.exe", "/T"])
                     .output();
                 let _ = Command::new("cmd")
                     .args(["/C", "wmic process where \"CommandLine like '%profiles_data%'\" call terminate >nul 2>&1"])
