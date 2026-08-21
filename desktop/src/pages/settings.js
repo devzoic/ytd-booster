@@ -182,22 +182,19 @@ const SettingsPage = {
       if (window.__TAURI__ && window.__TAURI__.core) {
         await window.__TAURI__.core.invoke('write_env', { settings: updated });
         App.port = parseInt(updated.PORT, 10) || 8008;
-        Toast.success('Settings saved to .env successfully!');
+        Toast.success('Settings saved successfully!');
         
-        // Auto restart engine to pick up new env
-        Toast.info('Restarting Python Engine with new settings...');
-        await window.__TAURI__.core.invoke('stop_engine');
-        setTimeout(async () => {
-          await window.__TAURI__.core.invoke('start_engine');
-          Toast.success('Engine restarted successfully!');
-        }, 1500);
+        // Auto restart engine with new settings
+        Toast.info('Applying new settings to engine...');
+        await App.stopEngine();
+        await App.startEngine();
       } else {
         App.port = parseInt(updated.PORT, 10) || 8008;
         Toast.success('Settings saved (Preview Mode)!');
       }
       this.currentEnv = updated;
     } catch (e) {
-      Toast.error(`Failed to save .env: ${e}`);
+      Toast.error(`Failed to save settings: ${e}`);
     }
   },
 

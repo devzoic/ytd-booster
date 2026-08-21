@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use tauri::AppHandle;
 use crate::sidecar::find_dev_python_dir;
@@ -133,20 +133,17 @@ pub fn write_env_file(app_handle: &AppHandle, settings: &HashMap<String, String>
         }
     }
 
-    // Write atomically
-    let tmp_path = env_path.with_extension("env.tmp");
-    let mut tmp_file = fs::File::create(&tmp_path)
-        .map_err(|e| format!("Failed to create temp file: {}", e))?;
-
-    for line in &output_lines {
-        writeln!(tmp_file, "{}", line).map_err(|e| format!("Failed to write: {}", e))?;
+    if let Some(parent) = env_path.parent() {
+        let _ = fs::create_dir_all(parent);
     }
 
-    tmp_file.flush().map_err(|e| format!("Failed to flush: {}", e))?;
-    drop(tmp_file);
+    let mut content = output_lines.join("\n");
+    if !content.ends_with('\n') {
+        content.push('\n');
+    }
 
-    fs::rename(&tmp_path, &env_path)
-        .map_err(|e| format!("Failed to save .env: {}", e))?;
+    fs::write(&env_path, content)
+        .map_err(|e| format!("Failed to save .env to {}: {}", env_path.display(), e))?;
 
     Ok(())
 }
