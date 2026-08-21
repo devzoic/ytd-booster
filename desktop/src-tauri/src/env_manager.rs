@@ -13,11 +13,13 @@ pub fn get_env_file_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
     if let Some(py_dir) = find_dev_python_dir() {
         let dev_env = py_dir.join(".env");
         if dev_env.exists() {
+            println!("[EnvManager] Using dev .env: {}", dev_env.display());
             return Ok(dev_env);
         }
         let dev_example = py_dir.join(".env.example");
         if dev_example.exists() {
             let _ = fs::copy(&dev_example, &dev_env);
+            println!("[EnvManager] Initialized dev .env from example: {}", dev_env.display());
             return Ok(dev_env);
         }
     }
@@ -31,6 +33,7 @@ pub fn get_env_file_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
 
     let _ = fs::create_dir_all(&config_dir);
     let user_env = config_dir.join(".env");
+    println!("[EnvManager] Using user config .env path: {}", user_env.display());
 
     if !user_env.exists() {
         // Try copying from bundled resource .env.example

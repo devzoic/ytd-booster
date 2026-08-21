@@ -112,7 +112,7 @@ const SettingsPage = {
         <button class="btn btn-ghost" onclick="SettingsPage.resetDefaults()">
           <span>Reset Defaults</span>
         </button>
-        <button class="btn btn-primary" onclick="SettingsPage.saveSettings()">
+        <button class="btn btn-primary" id="btn-save-settings" onclick="SettingsPage.saveSettings()">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
             <polyline points="17 21 17 13 7 13 7 21"/>
@@ -140,49 +140,84 @@ const SettingsPage = {
   async loadEnv() {
     try {
       if (window.__TAURI__ && window.__TAURI__.core) {
-        this.currentEnv = await window.__TAURI__.core.invoke('read_env');
+        this.currentEnv = (await window.__TAURI__.core.invoke('read_env')) || {};
       } else {
         // Fallback for browser preview
-        this.currentEnv = {
+        this.currentEnv = this.currentEnv && Object.keys(this.currentEnv).length > 0 ? this.currentEnv : {
           LARAVEL_API_URL: 'http://youtube.test/api',
           LARAVEL_API_TOKEN: '',
-          SAAS_DEVICE_KEY: 'dev_key_g1B2eipLZwv4FlbcZN1QBUI3',
-          NGROK_AUTHTOKEN: '3H2elxwZm1EMrYBNfwmVHI8ZJoG_3KtTcF1GAAVGJoYUHGaiw',
-          NGROK_DOMAIN: 'https://observant-skimpily-petition.ngrok-free.dev',
-          PORT: '8000',
+          SAAS_DEVICE_KEY: '',
+          NGROK_AUTHTOKEN: '',
+          NGROK_DOMAIN: '',
+          PORT: '8008',
           DEBUG: 'True'
         };
       }
 
-      document.getElementById('setting-laravel-url').value = this.currentEnv.LARAVEL_API_URL || '';
-      document.getElementById('setting-laravel-token').value = this.currentEnv.LARAVEL_API_TOKEN || '';
-      document.getElementById('setting-device-key').value = this.currentEnv.SAAS_DEVICE_KEY || '';
-      document.getElementById('setting-ngrok-token').value = this.currentEnv.NGROK_AUTHTOKEN || '';
-      document.getElementById('setting-ngrok-domain').value = this.currentEnv.NGROK_DOMAIN || '';
-      document.getElementById('setting-port').value = this.currentEnv.PORT || '8008';
-      document.getElementById('setting-debug').checked = (this.currentEnv.DEBUG || '').toLowerCase() === 'true';
+      console.log('[SettingsPage] Loaded env:', this.currentEnv);
+
+      const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val || '';
+      };
+
+      setVal('setting-laravel-url', this.currentEnv.LARAVEL_API_URL);
+      setVal('setting-laravel-token', this.currentEnv.LARAVEL_API_TOKEN);
+      setVal('setting-device-key', this.currentEnv.SAAS_DEVICE_KEY);
+      setVal('setting-ngrok-token', this.currentEnv.NGROK_AUTHTOKEN);
+      setVal('setting-ngrok-domain', this.currentEnv.NGROK_DOMAIN);
+      setVal('setting-port', this.currentEnv.PORT || '8008');
+
+      const debugEl = document.getElementById('setting-debug');
+      if (debugEl) {
+        debugEl.checked = (this.currentEnv.DEBUG || '').toLowerCase() === 'true';
+      }
     } catch (e) {
+      console.error('[SettingsPage] Failed to load .env:', e);
       Toast.error(`Failed to load .env settings: ${e}`);
     }
   },
 
   async saveSettings() {
-    const updated = {
-      ...this.currentEnv,
-      LARAVEL_API_URL: document.getElementById('setting-laravel-url').value.trim(),
-      LARAVEL_API_TOKEN: document.getElementById('setting-laravel-token').value.trim(),
-      SAAS_DEVICE_KEY: document.getElementById('setting-device-key').value.trim(),
-      NGROK_AUTHTOKEN: document.getElementById('setting-ngrok-token').value.trim(),
-      NGROK_DOMAIN: document.getElementById('setting-ngrok-domain').value.trim(),
-      PORT: document.getElementById('setting-port').value.trim() || '8008',
-      DEBUG: document.getElementById('setting-debug').checked ? 'True' : 'False',
-    };
+    const btn = document.getElementById('btn-save-settings');
+    const originalBtnHTML = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg class="btn-icon spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        <span>Saving...</span>
+      `;
+    }
 
     try {
+      const laravelUrl = document.getElementById('setting-laravel-url')?.value.trim() || '';
+      const laravelToken = document.getElementById('setting-laravel-token')?.value.trim() || '';
+      const deviceKey = document.getElementById('setting-device-key')?.value.trim() || '';
+      const ngrokToken = document.getElementById('setting-ngrok-token')?.value.trim() || '';
+      const ngrokDomain = document.getElementById('setting-ngrok-domain')?.value.trim() || '';
+      const port = document.getElementById('setting-port')?.value.trim() || '8008';
+      const debug = document.getElementById('setting-debug')?.checked ? 'True' : 'False';
+
+      const updated = {
+        ...(this.currentEnv || {}),
+        LARAVEL_API_URL: laravelUrl,
+        LARAVEL_API_TOKEN: laravelToken,
+        SAAS_DEVICE_KEY: deviceKey,
+        NGROK_AUTHTOKEN: ngrokToken,
+        NGROK_DOMAIN: ngrokDomain,
+        PORT: port,
+        DEBUG: debug,
+      };
+
+      console.log('[SettingsPage] Saving settings:', updated);
+
       if (window.__TAURI__ && window.__TAURI__.core) {
         await window.__TAURI__.core.invoke('write_env', { settings: updated });
         App.port = parseInt(updated.PORT, 10) || 8008;
-        Toast.success('Settings saved successfully!');
+        this.currentEnv = updated;
+        Toast.success('Settings saved to .env successfully!');
         
         // Auto restart engine with new settings
         Toast.info('Applying new settings to engine...');
@@ -190,11 +225,17 @@ const SettingsPage = {
         await App.startEngine();
       } else {
         App.port = parseInt(updated.PORT, 10) || 8008;
+        this.currentEnv = updated;
         Toast.success('Settings saved (Preview Mode)!');
       }
-      this.currentEnv = updated;
     } catch (e) {
+      console.error('[SettingsPage] Failed to save settings:', e);
       Toast.error(`Failed to save settings: ${e}`);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHTML;
+      }
     }
   },
 
