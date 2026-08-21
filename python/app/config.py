@@ -9,24 +9,44 @@ from dotenv import load_dotenv
 
 import sys
 
-# Define base paths
-if getattr(sys, 'frozen', False):
-    EXE_DIR = Path(sys.executable).parent
-    BASE_DIR = Path.cwd() if (Path.cwd() / ".env").exists() else EXE_DIR
-    ROOT_DIR = BASE_DIR
+# Determine writeable data directory and .env location
+custom_env_file = os.getenv("YT_ENV_FILE")
+custom_data_dir = os.getenv("YT_DATA_DIR")
+
+if custom_data_dir:
+    BASE_DIR = Path(custom_data_dir)
+elif getattr(sys, 'frozen', False):
+    if sys.platform == "win32":
+        appdata = os.environ.get("APPDATA", str(Path.home()))
+        BASE_DIR = Path(appdata) / "yt-booster-node"
+    else:
+        BASE_DIR = Path.home() / ".config" / "yt-booster-node"
 else:
     BASE_DIR = Path(__file__).parent.parent  # python/
-    ROOT_DIR = BASE_DIR.parent               # project root /
 
-# Explicitly load .env files from python/.env and root .env
-python_env_file = BASE_DIR / ".env"
-root_env_file = ROOT_DIR / ".env"
+ROOT_DIR = BASE_DIR.parent if not getattr(sys, 'frozen', False) else BASE_DIR
 
-if python_env_file.exists():
-    load_dotenv(dotenv_path=python_env_file, override=True)
+# Ensure writeable base dir exists
+try:
+    BASE_DIR.mkdir(parents=True, exist_ok=True)
+except Exception:
+    pass
 
-if root_env_file.exists():
-    load_dotenv(dotenv_path=root_env_file, override=False)
+# Load .env candidates in priority order
+env_candidates = []
+if custom_env_file:
+    env_candidates.append(Path(custom_env_file))
+
+env_candidates.extend([
+    BASE_DIR / ".env",
+    Path(__file__).parent.parent / ".env" if not getattr(sys, 'frozen', False) else None,
+    ROOT_DIR / ".env",
+    Path.cwd() / ".env"
+])
+
+for env_p in env_candidates:
+    if env_p and env_p.exists():
+        load_dotenv(dotenv_path=env_p, override=True)
 
 
 class Settings(BaseSettings):

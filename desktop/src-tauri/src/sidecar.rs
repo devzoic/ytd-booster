@@ -159,6 +159,22 @@ pub async fn start_engine(app_handle: &AppHandle, state: &SidecarState) -> Resul
     command.args(&args);
     command.current_dir(&work_dir);
     command.env("TAURI_ENV", "1");
+
+    // Inject all current .env settings into the child process environment
+    if let Ok(env_path) = crate::env_manager::get_env_file_path(app_handle) {
+        command.env("YT_ENV_FILE", &env_path);
+        if let Some(parent) = env_path.parent() {
+            command.env("YT_DATA_DIR", parent);
+        }
+    }
+    if let Ok(env_vars) = crate::env_manager::read_env_file(app_handle) {
+        for (k, v) in env_vars {
+            if !k.is_empty() {
+                command.env(&k, &v);
+            }
+        }
+    }
+
     command.stdout(std::process::Stdio::piped());
     command.stderr(std::process::Stdio::piped());
 

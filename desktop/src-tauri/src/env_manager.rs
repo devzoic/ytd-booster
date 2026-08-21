@@ -6,7 +6,7 @@ use tauri::AppHandle;
 use crate::sidecar::find_dev_python_dir;
 
 /// Get the path to the .env file
-fn get_env_file_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
+pub fn get_env_file_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
     use tauri::Manager;
 
     // 1. Check development directory
@@ -22,34 +22,34 @@ fn get_env_file_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
         }
     }
 
-    // 2. Production resource directory
-    let resource_dir = app_handle
+    // 2. Production: Always use user-specific app config directory (writable without admin rights)
+    let config_dir = app_handle
         .path()
-        .resource_dir()
-        .map_err(|e| format!("Failed to get resource dir: {}", e))?;
+        .app_config_dir()
+        .or_else(|_| app_handle.path().app_data_dir())
+        .map_err(|e| format!("Failed to get user config dir: {}", e))?;
 
-    let prod_env = resource_dir.join(".env");
-    if prod_env.exists() {
-        return Ok(prod_env);
-    }
+    let _ = fs::create_dir_all(&config_dir);
+    let user_env = config_dir.join(".env");
 
-    let prod_example = resource_dir.join("resources/.env.example");
-    if prod_example.exists() {
-        let _ = fs::copy(&prod_example, &prod_env);
-        return Ok(prod_env);
-    }
-
-    // 3. Fallback: adjacent to executable
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(parent) = exe.parent() {
-            let exe_env = parent.join(".env");
-            if exe_env.exists() {
-                return Ok(exe_env);
+    if !user_env.exists() {
+        // Try copying from bundled resource .env.example
+        let mut copied = false;
+        if let Ok(resource_dir) = app_handle.path().resource_dir() {
+            let prod_example = resource_dir.join("resources/.env.example");
+            if prod_example.exists() {
+                if fs::copy(&prod_example, &user_env).is_ok() {
+                    copied = true;
+                }
             }
+        }
+        if !copied {
+            let default_content = "# YT Booster Node Configuration\nPORT=8008\nLARAVEL_API_URL=http://127.0.0.1:8000/api\nLARAVEL_API_TOKEN=\nSAAS_DEVICE_KEY=\nNGROK_AUTHTOKEN=\nNGROK_DOMAIN=\nDEBUG=True\n";
+            let _ = fs::write(&user_env, default_content);
         }
     }
 
-    Ok(prod_env)
+    Ok(user_env)
 }
 
 /// Read and parse the .env file into a HashMap
