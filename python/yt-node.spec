@@ -16,12 +16,16 @@ block_cipher = None
 # Base directory is the directory of this spec file (python/)
 base_dir = Path('.').resolve()
 
-datas = [
+datas = []
+for src_rel, dest_rel in [
     ('app/templates', 'app/templates'),
     ('app/static', 'app/static'),
     ('app/extensions', 'app/extensions'),
     ('.env.example', '.'),
-]
+]:
+    src_p = base_dir / src_rel
+    if src_p.exists():
+        datas.append((src_rel, dest_rel))
 
 hidden_imports = [
     'uvicorn',

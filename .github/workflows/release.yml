@@ -83,3 +83,4 @@ jobs:
           releaseBody: 'Automated release of YT Booster Desktop Node for Windows and macOS.'
           releaseDraft: false
           prerelease: false
+          args: ${{ matrix.args }}
