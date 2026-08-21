@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     CHROME_USER_AGENT: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     
     model_config = SettingsConfigDict(
-        env_file=[str(python_env_file), str(root_env_file)],
+        env_file=[str(p) for p in env_candidates if p and p.exists()],
         env_file_encoding="utf-8",
         extra="ignore"
     )
