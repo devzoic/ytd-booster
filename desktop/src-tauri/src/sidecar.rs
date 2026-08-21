@@ -130,11 +130,30 @@ pub fn get_engine_launch_target(app_handle: &AppHandle) -> Result<(PathBuf, Vec<
 
 /// Start the Python sidecar engine
 pub async fn start_engine(app_handle: &AppHandle, state: &SidecarState) -> Result<String, String> {
-    {
+    let already_running = {
         let running = state.running.lock().map_err(|e| e.to_string())?;
-        if *running {
-            return Ok("Engine is already running".to_string());
+        let pid = state.pid.lock().map_err(|e| e.to_string())?;
+        if *running && pid.is_some() {
+            #[cfg(unix)]
+            {
+                let p = pid.unwrap();
+                let output = StdCommand::new("kill").arg("-0").arg(p.to_string()).output();
+                match output {
+                    Ok(o) if o.status.success() => true,
+                    _ => false,
+                }
+            }
+            #[cfg(not(unix))]
+            {
+                true
+            }
+        } else {
+            false
         }
+    };
+
+    if already_running {
+        return Ok("Engine is already running".to_string());
     }
 
     let (cmd_path, args, work_dir) = get_engine_launch_target(app_handle)?;
@@ -142,26 +161,41 @@ pub async fn start_engine(app_handle: &AppHandle, state: &SidecarState) -> Resul
     println!("[YT Booster] Spawning engine: {} {:?}", cmd_path.display(), args);
     println!("[YT Booster] Working directory: {}", work_dir.display());
 
-    // Clean up any stale process holding the port or ngrok sessions from previous runs
+    let configured_port = crate::env_manager::read_env_file(app_handle)
+        .ok()
+        .and_then(|m| m.get("PORT").cloned())
+        .filter(|p| !p.trim().is_empty())
+        .unwrap_or_else(|| "8008".to_string());
+
+    // Clean up any stale process holding the configured port, previous yt-node, or ngrok sessions
     #[cfg(unix)]
     {
+        let _ = StdCommand::new("sh")
+            .arg("-c")
+            .arg("pkill -9 -f 'yt-node' 2>/dev/null || true")
+            .output();
         let _ = StdCommand::new("sh")
             .arg("-c")
             .arg("killall -9 ngrok 2>/dev/null || pkill -9 -f 'ngrok start' 2>/dev/null || true")
             .output();
         let _ = StdCommand::new("sh")
             .arg("-c")
-            .arg("lsof -ti :8008,:8000 | xargs kill -9 2>/dev/null || true")
+            .arg(format!("lsof -ti:{} | xargs kill -9 2>/dev/null || true", configured_port))
             .output();
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
     }
     #[cfg(windows)]
     {
         let _ = StdCommand::new("taskkill")
+            .args(["/F", "/IM", "yt-node.exe", "/T"])
+            .output();
+        let _ = StdCommand::new("taskkill")
             .args(["/F", "/IM", "ngrok.exe", "/T"])
             .output();
         let _ = StdCommand::new("cmd")
-            .args(["/C", "for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :8008') do taskkill /f /pid %a >nul 2>&1"])
+            .args(["/C", &format!("for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :{}') do taskkill /f /pid %a >nul 2>&1", configured_port)])
             .output();
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
     }
 
     let mut command = StdCommand::new(&cmd_path);
@@ -292,6 +326,12 @@ pub async fn stop_engine(app_handle: &AppHandle, state: &SidecarState) -> Result
         *pid_lock
     };
 
+    let configured_port = crate::env_manager::read_env_file(app_handle)
+        .ok()
+        .and_then(|m| m.get("PORT").cloned())
+        .filter(|p| !p.trim().is_empty())
+        .unwrap_or_else(|| "8008".to_string());
+
     let result = match pid {
         Some(pid) => {
             println!("[YT Booster] Stopping engine (PID: {})", pid);
@@ -302,10 +342,11 @@ pub async fn stop_engine(app_handle: &AppHandle, state: &SidecarState) -> Result
                 // Kill child process tree first
                 let _ = Command::new("pkill").arg("-P").arg(pid.to_string()).output();
                 let _ = Command::new("kill").arg("-15").arg(pid.to_string()).output();
-                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
                 let _ = Command::new("kill").arg("-9").arg(pid.to_string()).output();
+                let _ = Command::new("sh").arg("-c").arg("pkill -9 -f 'yt-node' 2>/dev/null || true").output();
                 let _ = Command::new("sh").arg("-c").arg("killall -9 ngrok 2>/dev/null || pkill -9 -f 'ngrok start' 2>/dev/null || true").output();
-                let _ = Command::new("sh").arg("-c").arg("lsof -ti:8008,8000 | xargs kill -9 2>/dev/null || true").output();
+                let _ = Command::new("sh").arg("-c").arg(format!("lsof -ti:{} | xargs kill -9 2>/dev/null || true", configured_port)).output();
                 // Kill any active automation Chrome instances using profiles_data
                 let _ = Command::new("sh").arg("-c").arg("ps aux | grep -i 'profiles_data' | grep -v grep | awk '{print $2}' | xargs kill -9 2>/dev/null || true").output();
             }
@@ -317,7 +358,13 @@ pub async fn stop_engine(app_handle: &AppHandle, state: &SidecarState) -> Result
                     .args(["/PID", &pid.to_string(), "/F", "/T"])
                     .output();
                 let _ = Command::new("taskkill")
+                    .args(["/F", "/IM", "yt-node.exe", "/T"])
+                    .output();
+                let _ = Command::new("taskkill")
                     .args(["/F", "/IM", "ngrok.exe", "/T"])
+                    .output();
+                let _ = Command::new("cmd")
+                    .args(["/C", &format!("for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :{}') do taskkill /f /pid %a >nul 2>&1", configured_port)])
                     .output();
                 let _ = Command::new("cmd")
                     .args(["/C", "wmic process where \"CommandLine like '%profiles_data%'\" call terminate >nul 2>&1"])
@@ -338,7 +385,7 @@ pub async fn stop_engine(app_handle: &AppHandle, state: &SidecarState) -> Result
             #[cfg(unix)]
             {
                 use std::process::Command;
-                let _ = Command::new("sh").arg("-c").arg("lsof -ti:8008,8000 | xargs kill -9 2>/dev/null || true").output();
+                let _ = Command::new("sh").arg("-c").arg(format!("lsof -ti:{} | xargs kill -9 2>/dev/null || true", configured_port)).output();
             }
             Ok("Engine was not running".to_string())
         }

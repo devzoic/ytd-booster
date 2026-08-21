@@ -143,6 +143,11 @@ const DashboardPage = {
     try {
       const res = await fetch(App.apiUrl('/dashboard/api/stats'));
       if (res.ok) {
+        if (!App.isEngineRunning) {
+          App.updateEngineUI(true);
+        }
+        this.failCount = 0;
+
         const json = await res.json();
         const stats = json.data || {};
         
@@ -162,8 +167,18 @@ const DashboardPage = {
         const ramBarEl = document.getElementById('stat-ram-bar');
         if (ramEl) ramEl.innerText = `${memUsed} / ${memTotal} GB`;
         if (ramBarEl) ramBarEl.style.width = `${Math.min(Math.max(memPercent, 0), 100)}%`;
+      } else {
+        this.failCount = (this.failCount || 0) + 1;
+        if (this.failCount > 2 && App.isEngineRunning) {
+          App.updateEngineUI(false);
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      this.failCount = (this.failCount || 0) + 1;
+      if (this.failCount > 2 && App.isEngineRunning) {
+        App.updateEngineUI(false);
+      }
+    }
 
     // Profiles & Chrome processes count
     try {
