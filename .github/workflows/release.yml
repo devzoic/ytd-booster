@@ -1,0 +1,85 @@
+name: "Release YT Booster Desktop App"
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            os: 'macos'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'windows-latest'
+            os: 'windows'
+            args: '--target x86_64-pc-windows-msvc'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r python/requirements.txt
+
+      - name: Build Python Sidecar Binary
+        shell: bash
+        run: |
+          cd python
+          pyinstaller yt-node.spec --noconfirm
+          cd ..
+          mkdir -p desktop/src-tauri/binaries
+
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            cp python/dist/yt-node.exe desktop/src-tauri/binaries/yt-node-x86_64-pc-windows-msvc.exe
+            cp python/dist/yt-node.exe desktop/src-tauri/binaries/yt-node.exe
+          else
+            TARGET_TRIPLE=$(rustc -Vv | grep host | cut -f2 -d' ')
+            cp python/dist/yt-node desktop/src-tauri/binaries/yt-node-$TARGET_TRIPLE
+            cp python/dist/yt-node desktop/src-tauri/binaries/yt-node
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || 'x86_64-pc-windows-msvc' }}
+
+      - name: Install Desktop NPM Dependencies
+        run: |
+          cd desktop
+          npm ci || npm install
+
+      - name: Build Tauri Desktop Application
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: './desktop'
+          tagName: ${{ github.ref_name }}
+          releaseName: 'YT Booster ${{ github.ref_name }}'
+          releaseBody: 'Automated release of YT Booster Desktop Node for Windows and macOS.'
+          releaseDraft: false
+          prerelease: false

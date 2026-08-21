@@ -1,0 +1,23 @@
+[package]
+name = "yt-booster"
+version = "1.0.0"
+description = "YT Booster Desktop Application"
+authors = ["YT Booster"]
+edition = "2021"
+
+[lib]
+name = "yt_booster_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+tauri-plugin-autostart = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+chrono = "0.4"

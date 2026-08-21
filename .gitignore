@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+desktop/node_modules/
+venv/
+python/venv/
+.venv/
+python/.venv/
+
+# Build artifacts
+desktop/src-tauri/target/
+desktop/src-tauri/binaries/
+python/build/
+python/dist/
+python/*.spec
+!python/yt-node.spec
+*.pyc
+__pycache__/
+python/**/__pycache__/
+
+# Environment & Profiles
+.env
+python/.env
+desktop/.env
+python/profiles_data/
+*.log
+desktop/src-tauri/gen/
+
+# OS files
+.DS_Store
+Thumbs.db

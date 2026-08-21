@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Server Dashboard</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0f0d;
+            --bg-secondary: #0d1512;
+            --bg-card: #111a16;
+            --bg-card-hover: #162420;
+            --accent-green: #10b981;
+            --accent-green-light: #34d399;
+            --accent-green-dark: #059669;
+            --text-primary: #f0fdf4;
+            --text-secondary: #86efac;
+            --text-muted: #6b7280;
+            --border-color: #1f3d32;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --glow: 0 0 20px rgba(16, 185, 129, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--glow);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-green-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--accent-green);
+            border-radius: 50px;
+            font-size: 0.875rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Main Content */
+        .main {
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        @media (max-width: 1200px) {
+            .grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+
+            .grid-4,
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            background: var(--bg-card-hover);
+            box-shadow: var(--glow);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .card-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .card-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-green) 0%, var(--accent-green-light) 100%);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, var(--warning) 0%, #fbbf24 100%);
+        }
+
+        .progress-fill.danger {
+            background: linear-gradient(90deg, var(--danger) 0%, #f87171 100%);
+        }
+
+        /* Terminal Log Window */
+        .terminal {
+            background: #0d0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .terminal-header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red {
+            background: #ff5f56;
+        }
+
+        .terminal-dot.yellow {
+            background: #ffbd2e;
+        }
+
+        .terminal-dot.green {
+            background: #27c93f;
+        }
+
+        .terminal-title {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .terminal-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .terminal-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .terminal-btn:hover {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+            color: var(--bg-primary);
+        }
+
+        .terminal-body {
+            height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            font-size: 0.8rem;
+            line-height: 1.8;
+        }
+
+        .log-entry {
+            padding: 0.25rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .log-time {
+            color: var(--text-muted);
+            margin-right: 0.5rem;
+        }
+
+        .log-level {
+            padding: 0.125rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        .log-level.INFO {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green-light);
+        }
+
+        .log-level.WARNING {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+
+        .log-level.ERROR {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .log-level.DEBUG {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .log-message {
+            color: var(--text-primary);
+        }
+
+        /* Campaign Table */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+        }
+
+        tr:hover {
+            background: var(--bg-card-hover);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green-light);
+            border: 1px solid var(--accent-green);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid var(--danger);
+        }
+
+        .badge-info {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid var(--info);
+        }
+
+        /* Section Headers */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 2rem 0 1rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title i {
+            color: var(--accent-green);
+        }
+
+        /* Refresh Button */
+        .refresh-btn {
+            background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-dark) 100%);
+            border: none;
+            color: var(--bg-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .refresh-btn.loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-green-dark);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-green);
+        }
+
+        /* Auto-scroll indicator */
+        .auto-scroll-badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green-light);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="ri-server-line"></i>
+            </div>
+            <span class="logo-text">Python Server</span>
+        </div>
+        <div class="status-badge">
+            <span class="status-dot"></span>
+            <span>Server Running</span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Stats Cards -->
+        <div class="grid grid-4" id="stats-cards">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">CPU Usage</span>
+                    <div class="card-icon"><i class="ri-cpu-line"></i></div>
+                </div>
+                <div class="card-value" id="cpu-value">--</div>
+                <div class="card-subtitle" id="cpu-subtitle">Loading...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cpu-progress" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Memory</span>
+                    <div class="card-icon"><i class="ri-database-2-line"></i></div>
+                </div>
+                <div class="card-value" id="memory-value">--</div>
+                <div class="card-subtitle" id="memory-subtitle">Loading...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="memory-progress" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Chrome Profiles</span>
+                    <div class="card-icon"><i class="ri-chrome-line"></i></div>
+                </div>
+                <div class="card-value" id="profiles-value">--</div>
+                <div class="card-subtitle" id="profiles-subtitle">Loading...</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Active Campaigns</span>
+                    <div class="card-icon"><i class="ri-vidicon-line"></i></div>
+                </div>
+                <div class="card-value" id="campaigns-value">--</div>
+                <div class="card-subtitle" id="campaigns-subtitle">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Campaign Stats Section -->
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="ri-bar-chart-grouped-line"></i>
+                Campaign Progress
+            </h2>
+            <button class="refresh-btn" onclick="refreshAll()">
+                <i class="ri-refresh-line"></i>
+                Refresh
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Campaign ID</th>
+                            <th>Type</th>
+                            <th>Total</th>
+                            <th>Completed</th>
+                            <th>Pending</th>
+                            <th>Progress</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="campaigns-table">
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: var(--text-muted);">
+                                No active campaigns
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Terminal Logs Section -->
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="ri-terminal-box-line"></i>
+                Real-time Logs
+            </h2>
+            <span class="auto-scroll-badge" id="auto-scroll-indicator">
+                <i class="ri-arrow-down-line"></i> Auto-scroll ON
+            </span>
+        </div>
+
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="terminal-dots">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                </div>
+                <span class="terminal-title">python_server.log</span>
+                <div class="terminal-actions">
+                    <button class="terminal-btn" onclick="clearLogs()">
+                        <i class="ri-delete-bin-line"></i> Clear
+                    </button>
+                    <button class="terminal-btn" onclick="toggleAutoScroll()">
+                        <i class="ri-arrow-down-line"></i> Auto-scroll
+                    </button>
+                </div>
+            </div>
+            <div class="terminal-body" id="logs-container">
+                <div class="log-entry">
+                    <span class="log-time">[00:00:00]</span>
+                    <span class="log-level INFO">INFO</span>
+                    <span class="log-message">Waiting for logs...</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let autoScroll = true;
+        let lastLogCount = 0;
+
+        // Format log entry
+        function formatLogEntry(log) {
+            const timeMatch = log.match(/\d{4}-\d{2}-\d{2} (\d{2}:\d{2}:\d{2})/);
+            const time = timeMatch ? timeMatch[1] : '--:--:--';
+
+            let level = 'INFO';
+            let levelClass = 'INFO';
+            if (log.includes('ERROR')) {
+                level = 'ERROR';
+                levelClass = 'ERROR';
+            } else if (log.includes('WARNING')) {
+                level = 'WARN';
+                levelClass = 'WARNING';
+            } else if (log.includes('DEBUG')) {
+                level = 'DEBUG';
+                levelClass = 'DEBUG';
+            }
+
+            // Extract message after level
+            const msgMatch = log.match(/\| (INFO|ERROR|WARNING|DEBUG)\s+\| (.+)/);
+            const message = msgMatch ? msgMatch[2] : log;
+
+            return `
+                <div class="log-entry">
+                    <span class="log-time">[${time}]</span>
+                    <span class="log-level ${levelClass}">${level}</span>
+                    <span class="log-message">${escapeHtml(message)}</span>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Fetch system stats
+        async function fetchStats() {
+            try {
+                const response = await fetch('/dashboard/api/stats');
+                const data = await response.json();
+
+                if (data.success) {
+                    const {
+                        cpu,
+                        memory
+                    } = data.data;
+
+                    // CPU
+                    document.getElementById('cpu-value').textContent = `${cpu.percent}%`;
+                    document.getElementById('cpu-subtitle').textContent =
+                        `${cpu.count} cores @ ${Math.round(cpu.frequency_mhz)} MHz`;
+                    document.getElementById('cpu-progress').style.width = `${cpu.percent}%`;
+                    updateProgressClass('cpu-progress', cpu.percent);
+
+                    // Memory
+                    document.getElementById('memory-value').textContent = `${memory.percent}%`;
+                    document.getElementById('memory-subtitle').textContent =
+                        `${memory.used_gb} / ${memory.total_gb} GB`;
+                    document.getElementById('memory-progress').style.width = `${memory.percent}%`;
+                    updateProgressClass('memory-progress', memory.percent);
+                }
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+        }
+
+        function updateProgressClass(elementId, percent) {
+            const el = document.getElementById(elementId);
+            el.classList.remove('warning', 'danger');
+            if (percent > 80) el.classList.add('danger');
+            else if (percent > 60) el.classList.add('warning');
+        }
+
+        // Fetch profile stats
+        async function fetchProfiles() {
+            try {
+                const response = await fetch('/dashboard/api/profiles');
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('profiles-value').textContent = data.data.profiles_running;
+                    document.getElementById('profiles-subtitle').textContent =
+                        `${data.data.total_chrome_processes} Chrome processes`;
+                }
+            } catch (error) {
+                console.error('Error fetching profiles:', error);
+            }
+        }
+
+        // Fetch campaign stats
+        async function fetchCampaigns() {
+            try {
+                const response = await fetch('/dashboard/api/campaigns');
+                const data = await response.json();
+
+                if (data.success) {
+                    const {
+                        total_campaigns,
+                        completed_profiles,
+                        pending_profiles,
+                        campaigns
+                    } = data.data;
+
+                    document.getElementById('campaigns-value').textContent = total_campaigns;
+                    document.getElementById('campaigns-subtitle').textContent =
+                        `${completed_profiles} completed, ${pending_profiles} pending`;
+
+                    // Update table
+                    const tbody = document.getElementById('campaigns-table');
+                    if (Object.keys(campaigns).length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="8" style="text-align: center; color: var(--text-muted);">
+                                    No active campaigns
+                                </td>
+                            </tr>
+                        `;
+                    } else {
+                        tbody.innerHTML = Object.values(campaigns).map(c => {
+                            if (!c) return '';
+                            const progress = c.total_profiles > 0 ?
+                                Math.round((c.completed_profiles / c.total_profiles) * 100) :
+                                0;
+                            const isCancelled = c.cancelled === true;
+                            const isCompleted = c.pending_profiles === 0;
+                            const statusClass = isCancelled ? 'danger' : 
+                                isCompleted ? 'success' :
+                                c.running_profiles > 0 ? 'info' : 'warning';
+                            const statusText = isCancelled ? 'Stopped' :
+                                isCompleted ? 'Completed' :
+                                c.running_profiles > 0 ? 'Running' : 'Pending';
+
+                            return `
+                                <tr>
+                                    <td>#${c.campaign_id}</td>
+                                    <td><span class="badge badge-info">${c.campaign_type}</span></td>
+                                    <td>${c.total_profiles}</td>
+                                    <td style="color: var(--accent-green-light)">${c.completed_profiles}</td>
+                                    <td style="color: var(--warning)">${c.pending_profiles}</td>
+                                    <td>
+                                        <div class="progress-bar" style="width: 100px; margin: 0;">
+                                            <div class="progress-fill" style="width: ${progress}%"></div>
+                                        </div>
+                                        <span style="font-size: 0.7rem; color: var(--text-muted)">${progress}%</span>
+                                    </td>
+                                    <td><span class="badge badge-${statusClass}">${statusText}</span></td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.25rem;">
+                                            ${isCancelled ? `
+                                                <button onclick="restartCampaign(${c.campaign_id})" class="terminal-btn" title="Restart" style="color: var(--accent-green);">
+                                                    <i class="ri-play-circle-line"></i>
+                                                </button>
+                                            ` : !isCompleted ? `
+                                                <button onclick="stopCampaign(${c.campaign_id})" class="terminal-btn" title="Stop">
+                                                    <i class="ri-stop-circle-line"></i>
+                                                </button>
+                                            ` : ''}
+                                            <button onclick="clearCampaign(${c.campaign_id})" class="terminal-btn" title="Clear from cache">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching campaigns:', error);
+            }
+        }
+
+        // Fetch logs
+        async function fetchLogs() {
+            try {
+                const response = await fetch('/dashboard/api/logs?limit=200');
+                const data = await response.json();
+
+                if (data.success && data.data.logs.length > 0) {
+                    const container = document.getElementById('logs-container');
+                    const newLogs = data.data.logs.slice(lastLogCount);
+
+                    if (newLogs.length > 0 || lastLogCount === 0) {
+                        container.innerHTML = data.data.logs.map(formatLogEntry).join('');
+                        lastLogCount = data.data.logs.length;
+
+                        if (autoScroll) {
+                            container.scrollTop = container.scrollHeight;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching logs:', error);
+            }
+        }
+
+        // Clear logs
+        async function clearLogs() {
+            try {
+                await fetch('/dashboard/api/logs', {
+                    method: 'DELETE'
+                });
+                document.getElementById('logs-container').innerHTML = `
+                    <div class="log-entry">
+                        <span class="log-time">[${new Date().toLocaleTimeString()}]</span>
+                        <span class="log-level INFO">INFO</span>
+                        <span class="log-message">Logs cleared</span>
+                    </div>
+                `;
+                lastLogCount = 0;
+            } catch (error) {
+                console.error('Error clearing logs:', error);
+            }
+        }
+
+        // Stop a campaign
+        async function stopCampaign(campaignId) {
+            if (!confirm(`Stop campaign #${campaignId}? This will notify the Laravel server.`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/dashboard/api/campaigns/${campaignId}/stop`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Campaign #${campaignId} stopped successfully`);
+                    fetchCampaigns();
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            } catch (error) {
+                console.error('Error stopping campaign:', error);
+                alert('Error stopping campaign');
+            }
+        }
+
+        // Clear a campaign from cache
+        async function clearCampaign(campaignId) {
+            if (!confirm(`Clear campaign #${campaignId} from cache? This will remove it from the dashboard.`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/dashboard/api/campaigns/${campaignId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    fetchCampaigns();
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            } catch (error) {
+                console.error('Error clearing campaign:', error);
+                alert('Error clearing campaign');
+            }
+        }
+
+        // Restart a stopped campaign
+        async function restartCampaign(campaignId) {
+            if (!confirm(`Restart campaign #${campaignId}? Failed profiles will be reset to pending.`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/dashboard/api/campaigns/${campaignId}/restart`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Campaign #${campaignId} restarted! ${data.data.reset_count} profiles reset to pending.\n\nNow start the campaign again from Laravel to resume.`);
+                    fetchCampaigns();
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            } catch (error) {
+                console.error('Error restarting campaign:', error);
+                alert('Error restarting campaign');
+            }
+        }
+
+        // Toggle auto-scroll
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            document.getElementById('auto-scroll-indicator').innerHTML = autoScroll ?
+                '<i class="ri-arrow-down-line"></i> Auto-scroll ON' :
+                '<i class="ri-pause-line"></i> Auto-scroll OFF';
+        }
+
+        // Refresh all
+        async function refreshAll() {
+            const btn = document.querySelector('.refresh-btn');
+            btn.classList.add('loading');
+
+            await Promise.all([
+                fetchStats(),
+                fetchProfiles(),
+                fetchCampaigns(),
+                fetchLogs()
+            ]);
+
+            btn.classList.remove('loading');
+        }
+
+        // Initialize
+        refreshAll();
+
+        // Auto-refresh
+        setInterval(fetchStats, 2000);
+        setInterval(fetchProfiles, 5000);
+        setInterval(fetchCampaigns, 3000);
+        setInterval(fetchLogs, 1000);
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "yt-booster-desktop",
+  "version": "1.0.0",
+  "description": "YT Booster Node Desktop Application",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0"
+  }
+}
