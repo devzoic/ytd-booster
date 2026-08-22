@@ -272,15 +272,11 @@ def register_device_with_laravel(public_url: str = "") -> dict:
                 device_info = res_json.get("device", {})
                 device_id = device_info.get("id")
 
-                print("\n" + "=" * 70)
-                print(f"  ✅ LARAVEL DEVICE AUTO-REGISTRATION [{action}]")
-                print(f"  📌 Device ID    : #{device_id}")
-                print(f"  💻 Machine Name : {device_data['name']}")
-                print(f"  🆔 Hardware UUID: {device_data['device_identifier']}")
-                print(f"  ⚙️ Specs        : {device_data['description']}")
-                print(f"  🌐 Ngrok API URL: {public_url or 'Local Only'}")
-                print("=" * 70 + "\n")
-
+                logger.info(f"=== LARAVEL DEVICE AUTO-REGISTRATION [{action}] ===")
+                logger.info(f"Device ID    : #{device_id}")
+                logger.info(f"Machine Name : {device_data['name']}")
+                logger.info(f"Hardware UUID: {device_data['device_identifier']}")
+                logger.info(f"Specs        : {device_data['description']}")
                 logger.info(f"Successfully {action.lower()} device #{device_id} ({device_data['name']}) on Laravel web server.")
                 return res_json
             else:

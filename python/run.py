@@ -14,6 +14,13 @@ try:
 except AttributeError:
     pass
 
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from app.config import settings
 
 if __name__ == "__main__":
@@ -22,7 +29,7 @@ if __name__ == "__main__":
         from app.services.device_registrar import register_device_with_laravel
         register_device_with_laravel(public_url="")
     except Exception as e:
-        print(f"⚠️ Device auto-registration skipped: {e}")
+        print(f"[!] Device auto-registration skipped: {e}")
 
     # Disable reload in binary/Tauri environment so Tauri can cleanly kill and control single PID
     is_frozen = getattr(sys, 'frozen', False)
