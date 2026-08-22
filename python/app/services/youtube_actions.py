@@ -14,8 +14,15 @@ from app.services.browser_service import BrowserService
 
 logger = setup_logger(__name__)
 
-# Laravel API base URL
-LARAVEL_API_URL = "http://youtube.test"
+from app.config import settings
+
+def get_laravel_endpoint(endpoint: str) -> str:
+    """Construct full Laravel API endpoint URL from settings."""
+    base = (settings.LARAVEL_API_URL or "http://youtube.test/api").rstrip("/")
+    if not base.endswith("/api"):
+        base = f"{base}/api"
+    clean_ep = endpoint.lstrip("/").replace("api/", "")
+    return f"{base}/{clean_ep}"
 
 # Random positive comments pool
 COMMENT_POOL = [
@@ -580,8 +587,8 @@ class YouTubeActions:
                     payload["error_message"] = error_message
                 
                 response = await client.post(
-                    f"{LARAVEL_API_URL}/api/campaigns/record-subscription",
-                    json=payload
+                    get_laravel_endpoint("campaigns/record-subscription"),
+                    json=payload,
                 )
                 
                 if response.status_code == 200:
@@ -632,8 +639,8 @@ class YouTubeActions:
                         payload["watch_percentage"] = metadata["watch_percentage"]
                 
                 response = await client.post(
-                    f"{LARAVEL_API_URL}/api/campaigns/action",
-                    json=payload
+                    get_laravel_endpoint("campaigns/action"),
+                    json=payload,
                 )
                 
                 if response.status_code == 200:

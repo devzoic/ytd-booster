@@ -19,16 +19,21 @@ from app.config import settings
 
 logger = setup_logger(__name__)
 
-# Laravel API base URL
-LARAVEL_API_URL = "http://youtube.test"
+def get_laravel_endpoint(endpoint: str) -> str:
+    """Construct full Laravel API endpoint URL from settings."""
+    base = (settings.LARAVEL_API_URL or "http://youtube.test/api").rstrip("/")
+    if not base.endswith("/api"):
+        base = f"{base}/api"
+    clean_ep = endpoint.lstrip("/").replace("api/", "")
+    return f"{base}/{clean_ep}"
 
 
 class VideoWatcher:
     """Service for watching YouTube videos and reporting completion."""
     
     # Random watch percentage range (20-30%)
-    MIN_WATCH_PERCENTAGE = 5
-    MAX_WATCH_PERCENTAGE = 10
+    MIN_WATCH_PERCENTAGE = 72
+    MAX_WATCH_PERCENTAGE = 100
     
     # Cache video durations to avoid repeated lookups
     _duration_cache: Dict[str, int] = {}
@@ -198,7 +203,7 @@ class VideoWatcher:
                 for attempt in range(3):
                     try:
                         response = await client.post(
-                            f"{LARAVEL_API_URL}/api/campaigns/record-view",
+                            get_laravel_endpoint("campaigns/record-view"),
                             json={
                                 "campaign_id": campaign_id,
                                 "profile_name": profile_name,
@@ -238,7 +243,7 @@ class VideoWatcher:
                 for attempt in range(3):
                     try:
                         response = await client.post(
-                            f"{LARAVEL_API_URL}/api/campaigns/profile-ready",
+                            get_laravel_endpoint("campaigns/profile-ready"),
                             json={
                                 "profile_name": profile_name,
                                 "campaign_id": campaign_id,
@@ -274,7 +279,7 @@ class VideoWatcher:
         try:
             async with httpx.AsyncClient(timeout=30) as client:
                 response = await client.post(
-                    f"{LARAVEL_API_URL}/api/campaigns/profile-bot-detected",
+                    get_laravel_endpoint("campaigns/profile-bot-detected"),
                     json={
                         "profile_name": profile_name,
                         "campaign_id": campaign_id,
