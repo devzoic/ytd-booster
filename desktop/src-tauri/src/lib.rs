@@ -80,6 +80,57 @@ async fn test_connection(url: String) -> Result<serde_json::Value, String> {
     }
 }
 
+/// Check for app updates from GitHub Releases
+#[tauri::command]
+async fn check_for_updates(app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    
+    let updater = app_handle.updater().map_err(|e| format!("Updater not available: {}", e))?;
+    match updater.check().await {
+        Ok(Some(update)) => {
+            Ok(serde_json::json!({
+                "available": true,
+                "current_version": update.current_version,
+                "version": update.version,
+                "body": update.body
+            }))
+        }
+        Ok(None) => {
+            Ok(serde_json::json!({
+                "available": false,
+                "message": "You are on the latest version!"
+            }))
+        }
+        Err(e) => {
+            Ok(serde_json::json!({
+                "available": false,
+                "error": format!("{}", e)
+            }))
+        }
+    }
+}
+
+/// Download and install an available update
+#[tauri::command]
+async fn download_and_install_update(app_handle: tauri::AppHandle) -> Result<String, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    
+    let updater = app_handle.updater().map_err(|e| format!("Updater not available: {}", e))?;
+    let update = updater.check().await
+        .map_err(|e| format!("Failed to check: {}", e))?
+        .ok_or_else(|| "No update available".to_string())?;
+    
+    let mut downloaded = 0;
+    let _ = update.download_and_install(|chunk_len, total| {
+        downloaded += chunk_len;
+        println!("[Updater] Downloaded {} / {:?} bytes", downloaded, total);
+    }, || {
+        println!("[Updater] Download complete, installing...");
+    }).await.map_err(|e| format!("Failed to install update: {}", e))?;
+    
+    Ok("Update installed. Restart the app to apply.".to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -88,6 +139,7 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(SidecarState::new())
         .setup(|app| {
             // Setup system tray
@@ -119,6 +171,8 @@ pub fn run() {
             read_env,
             write_env,
             test_connection,
+            check_for_updates,
+            download_and_install_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running YT Booster");

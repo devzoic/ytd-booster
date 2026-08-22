@@ -5,6 +5,7 @@
   "permissions": [
     "core:default",
     "shell:default",
-    "autostart:default"
+    "autostart:default",
+    "updater:default"
   ]
 }

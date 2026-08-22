@@ -107,6 +107,62 @@ const SettingsPage = {
         </div>
       </div>
 
+      <!-- Section 4: Software Updates -->
+      <div class="card-section">
+        <div class="card-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green, #22c55e)" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Software Updates</span>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <div>
+            <div style="font-weight: 600; font-size: 13px;">Current Version</div>
+            <div style="font-size: 12px; color: var(--text-muted);" id="update-current-version">v1.1.0</div>
+          </div>
+          <button class="btn btn-ghost" id="btn-check-updates" onclick="SettingsPage.checkForUpdates()">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            <span>Check for Updates</span>
+          </button>
+        </div>
+
+        <div id="update-status" style="display: none; padding: 12px; margin-top: 8px; border-radius: 8px; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2);">
+          <div id="update-status-text" style="font-size: 13px; font-weight: 500;"></div>
+          <div id="update-progress-wrap" style="display: none; margin-top: 8px;">
+            <div style="background: rgba(255,255,255,0.08); border-radius: 4px; height: 6px; overflow: hidden;">
+              <div id="update-progress-bar" style="width: 0%; height: 100%; background: var(--accent-green, #22c55e); border-radius: 4px; transition: width 0.3s ease;"></div>
+            </div>
+          </div>
+          <div id="update-actions" style="display: none; margin-top: 10px; display: flex; gap: 8px;">
+            <button class="btn btn-primary" id="btn-install-update" onclick="SettingsPage.installUpdate()">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              <span>Download & Install</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="toggle-wrapper" style="margin-top: 8px;">
+          <div>
+            <div style="font-weight: 600; font-size: 13px;">Auto-Update</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Automatically download and install updates</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-auto-update">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
       <!-- Action Bar -->
       <div style="display: flex; justify-content: flex-end; gap: 14px; margin-top: 10px;">
         <button class="btn btn-ghost" onclick="SettingsPage.resetDefaults()">
@@ -172,6 +228,11 @@ const SettingsPage = {
       if (debugEl) {
         debugEl.checked = (this.currentEnv.DEBUG || '').toLowerCase() === 'true';
       }
+
+      const autoUpdateEl = document.getElementById('setting-auto-update');
+      if (autoUpdateEl) {
+        autoUpdateEl.checked = (this.currentEnv.AUTO_UPDATE || '').toLowerCase() !== 'false';
+      }
     } catch (e) {
       console.error('[SettingsPage] Failed to load .env:', e);
       Toast.error(`Failed to load .env settings: ${e}`);
@@ -199,6 +260,7 @@ const SettingsPage = {
       const ngrokDomain = document.getElementById('setting-ngrok-domain')?.value.trim() || '';
       const port = document.getElementById('setting-port')?.value.trim() || '8008';
       const debug = document.getElementById('setting-debug')?.checked ? 'True' : 'False';
+      const autoUpdate = document.getElementById('setting-auto-update')?.checked ? 'True' : 'False';
 
       const updated = {
         ...(this.currentEnv || {}),
@@ -209,6 +271,7 @@ const SettingsPage = {
         NGROK_DOMAIN: ngrokDomain,
         PORT: port,
         DEBUG: debug,
+        AUTO_UPDATE: autoUpdate,
       };
 
       console.log('[SettingsPage] Saving settings:', updated);
@@ -268,5 +331,116 @@ const SettingsPage = {
     document.getElementById('setting-port').value = '8000';
     document.getElementById('setting-debug').checked = true;
     Toast.info('Reset form to default values.');
+  },
+
+  async checkForUpdates() {
+    const btn = document.getElementById('btn-check-updates');
+    const statusDiv = document.getElementById('update-status');
+    const statusText = document.getElementById('update-status-text');
+    const actionsDiv = document.getElementById('update-actions');
+    const originalHTML = btn ? btn.innerHTML : '';
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg class="btn-icon spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        <span>Checking...</span>
+      `;
+    }
+
+    try {
+      if (!window.__TAURI__ || !window.__TAURI__.core) {
+        statusDiv.style.display = 'block';
+        statusText.textContent = 'Update check is only available in the installed app.';
+        actionsDiv.style.display = 'none';
+        return;
+      }
+
+      const result = await window.__TAURI__.core.invoke('check_for_updates');
+      console.log('[Updates] Check result:', result);
+
+      statusDiv.style.display = 'block';
+
+      if (result.available) {
+        statusDiv.style.background = 'rgba(34,197,94,0.08)';
+        statusDiv.style.borderColor = 'rgba(34,197,94,0.2)';
+        statusText.innerHTML = `<strong>Update Available!</strong> Version ${result.version} is ready to download.`;
+        if (result.body) {
+          statusText.innerHTML += `<div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">${result.body}</div>`;
+        }
+        actionsDiv.style.display = 'flex';
+      } else {
+        statusDiv.style.background = 'rgba(99,102,241,0.08)';
+        statusDiv.style.borderColor = 'rgba(99,102,241,0.2)';
+        statusText.textContent = result.error ? `Update check failed: ${result.error}` : '✓ You are running the latest version!';
+        actionsDiv.style.display = 'none';
+      }
+    } catch (e) {
+      console.error('[Updates] Check failed:', e);
+      if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'rgba(239,68,68,0.08)';
+        statusDiv.style.borderColor = 'rgba(239,68,68,0.2)';
+        statusText.textContent = `Update check error: ${e}`;
+        actionsDiv.style.display = 'none';
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+      }
+    }
+  },
+
+  async installUpdate() {
+    const btn = document.getElementById('btn-install-update');
+    const statusText = document.getElementById('update-status-text');
+    const progressWrap = document.getElementById('update-progress-wrap');
+    const originalHTML = btn ? btn.innerHTML : '';
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg class="btn-icon spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        <span>Downloading...</span>
+      `;
+    }
+
+    if (statusText) statusText.textContent = 'Downloading update...';
+    if (progressWrap) progressWrap.style.display = 'block';
+
+    try {
+      const result = await window.__TAURI__.core.invoke('download_and_install_update');
+      if (statusText) statusText.innerHTML = '<strong>✓ Update installed!</strong> Restart the app to apply the update.';
+      if (btn) {
+        btn.innerHTML = `
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          <span>Restart Now</span>
+        `;
+        btn.disabled = false;
+        btn.onclick = async () => {
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            await window.__TAURI__.core.invoke('plugin:process|restart');
+          }
+        };
+      }
+      if (progressWrap) progressWrap.style.display = 'none';
+      Toast.success('Update downloaded and installed! Restart to apply.');
+    } catch (e) {
+      console.error('[Updates] Install failed:', e);
+      Toast.error(`Update failed: ${e}`);
+      if (statusText) statusText.textContent = `Update failed: ${e}`;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+      }
+    }
   }
 };
