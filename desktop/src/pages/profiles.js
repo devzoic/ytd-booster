@@ -15,7 +15,7 @@ const ProfilesPage = {
             </svg>
             <span>Managed Chrome Profiles</span>
           </div>
-          <button class="btn btn-ghost" onclick="ProfilesPage.fetchProfiles()">
+          <button class="btn btn-ghost" id="btn-refresh-profiles">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="23 4 23 10 17 10"/>
               <polyline points="1 20 1 14 7 14"/>
@@ -50,6 +50,23 @@ const ProfilesPage = {
   },
 
   async init() {
+    // Wire refresh button
+    const refreshBtn = document.getElementById('btn-refresh-profiles');
+    if (refreshBtn) refreshBtn.addEventListener('click', () => this.fetchProfiles());
+
+    // Event delegation for dynamically generated Close/Launch buttons
+    const tbody = document.getElementById('profiles-table-body');
+    if (tbody) {
+      tbody.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const profile = btn.getAttribute('data-profile');
+        if (action === 'close') this.closeBrowser(profile);
+        else if (action === 'launch') this.openBrowser(profile);
+      });
+    }
+
     await this.fetchProfiles();
   },
 
@@ -90,9 +107,9 @@ const ProfilesPage = {
               <td style="font-family: var(--font-mono); color: var(--text-muted);">${port}</td>
               <td>
                 ${isRunning ? `
-                  <button class="btn btn-danger" style="padding: 4px 10px; font-size: 11px;" onclick="ProfilesPage.closeBrowser('${p.name}')">Close</button>
+                  <button class="btn btn-danger" style="padding: 4px 10px; font-size: 11px;" data-action="close" data-profile="${p.name}">Close</button>
                 ` : `
-                  <button class="btn btn-ghost" style="padding: 4px 10px; font-size: 11px;" onclick="ProfilesPage.openBrowser('${profilePath}')">Launch</button>
+                  <button class="btn btn-ghost" style="padding: 4px 10px; font-size: 11px;" data-action="launch" data-profile="${profilePath}">Launch</button>
                 `}
               </td>
             </tr>

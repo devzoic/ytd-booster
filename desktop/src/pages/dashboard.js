@@ -112,7 +112,7 @@ const DashboardPage = {
             </svg>
             <span>Live Output</span>
           </div>
-          <button class="btn btn-ghost" style="padding: 4px 10px; font-size: 11px;" onclick="App.navigate('logs')">
+          <button class="btn btn-ghost" style="padding: 4px 10px; font-size: 11px;" id="btn-expand-terminal">
             Expand Terminal
           </button>
         </div>
@@ -128,6 +128,9 @@ const DashboardPage = {
   },
 
   async init() {
+    const expandBtn = document.getElementById('btn-expand-terminal');
+    if (expandBtn) expandBtn.addEventListener('click', () => App.navigate('logs'));
+
     this.fetchStats();
     this.statsInterval = setInterval(() => this.fetchStats(), 3000);
   },

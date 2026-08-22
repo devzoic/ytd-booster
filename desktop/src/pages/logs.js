@@ -20,10 +20,10 @@ const LogsPage = {
           </div>
 
           <div style="display: flex; align-items: center; gap: 10px;">
-            <button class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px;" onclick="LogsPage.toggleAutoScroll()">
+            <button class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px;" id="btn-autoscroll">
               <span id="autoscroll-label">Auto-Scroll: ON</span>
             </button>
-            <button class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px;" onclick="LogsPage.clearLogs()">
+            <button class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px;" id="btn-clear-logs">
               <span>Clear Console</span>
             </button>
           </div>
@@ -37,6 +37,12 @@ const LogsPage = {
   },
 
   init() {
+    const bind = (id, handler) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('click', handler);
+    };
+    bind('btn-autoscroll', () => this.toggleAutoScroll());
+    bind('btn-clear-logs', () => this.clearLogs());
     this.renderExistingLogs();
   },
 
