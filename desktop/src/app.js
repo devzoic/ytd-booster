@@ -17,7 +17,8 @@ const App = {
     dashboard: DashboardPage,
     settings: SettingsPage,
     profiles: ProfilesPage,
-    logs: LogsPage
+    logs: LogsPage,
+    updates: UpdatesPage
   },
 
   async init() {
@@ -85,7 +86,8 @@ const App = {
       dashboard: 'Node Dashboard',
       settings: 'Environment & Configuration',
       profiles: 'Chrome Profiles',
-      logs: 'Console Logs'
+      logs: 'Console Logs',
+      updates: 'Software Updates'
     };
     document.getElementById('current-page-title').innerText = titles[pageId] || 'YT Booster';
 
