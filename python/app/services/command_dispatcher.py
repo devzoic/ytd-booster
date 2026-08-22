@@ -69,11 +69,14 @@ class CommandDispatcher:
 
     async def _poll_commands(self):
         """Fetch pending commands from Laravel and execute them."""
-        if not settings.SAAS_DEVICE_KEY or not settings.LARAVEL_API_URL:
-            return
+        import socket
+        clean_hostname = socket.gethostname().split(".")[0]
 
         url = f"{settings.LARAVEL_API_URL.rstrip('/')}/device/commands/pending"
-        params = {"device_key": settings.SAAS_DEVICE_KEY}
+        params = {
+            "device_key": settings.SAAS_DEVICE_KEY,
+            "device_name": clean_hostname,
+        }
 
         async with httpx.AsyncClient() as client:
             try:
