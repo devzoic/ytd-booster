@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     
     # API Settings
     APP_NAME: str = "YT Booster"
-    APP_VERSION: str = "1.0.0"
+    APP_VERSION: str = "1.2.1"
     DEBUG: bool = True
     HOST: str = "0.0.0.0"
     PORT: int = 8008

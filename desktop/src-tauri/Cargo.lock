@@ -5323,7 +5323,7 @@ dependencies = [
 
 [[package]]
 name = "yt-booster"
-version = "1.1.0"
+version = "1.2.1"
 dependencies = [
  "chrono",
  "reqwest 0.12.28",
