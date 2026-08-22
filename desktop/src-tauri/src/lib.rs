@@ -37,16 +37,21 @@ fn get_engine_status(state: tauri::State<'_, SidecarState>) -> serde_json::Value
 
 /// Test connection to Laravel server
 #[tauri::command]
-async fn test_connection(url: String) -> Result<serde_json::Value, String> {
+async fn test_connection(url: Option<String>) -> Result<serde_json::Value, String> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
         .build()
         .map_err(|e| e.to_string())?;
     
-    let base_url = url.trim_end_matches('/').to_string();
-    let health_url = format!("{}/health", base_url);
+    let raw_url = url.unwrap_or_else(|| "http://youtube.test/api".to_string());
+    let base_url = raw_url.trim().trim_end_matches('/').to_string();
+    let health_url = if base_url.ends_with("/api") {
+        format!("{}/health", base_url)
+    } else {
+        format!("{}/api/health", base_url)
+    };
     
-    // First try /health
+    // First try /api/health
     if let Ok(resp) = client.get(&health_url).send().await {
         let status = resp.status().as_u16();
         if status >= 200 && status < 400 {

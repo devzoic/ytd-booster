@@ -229,12 +229,13 @@ const SettingsPage = {
     }
 
     try {
+      const laravelUrl = document.getElementById('setting-laravel-url')?.value.trim() || 'http://youtube.test/api';
       if (window.__TAURI__ && window.__TAURI__.core) {
-        const res = await window.__TAURI__.core.invoke('test_connection');
+        const res = await window.__TAURI__.core.invoke('test_connection', { url: laravelUrl });
         if (res.success) {
-          Toast.success(res.message || 'Connection successful!');
+          Toast.success(res.message || 'Connection successful! Laravel server is reachable.');
         } else {
-          Toast.error(`Connection failed: ${res.error || 'HTTP ' + res.status_code}`);
+          Toast.error(`Connection failed: ${res.error || 'HTTP ' + (res.status_code || 'Error')}`);
         }
       } else {
         Toast.success('Laravel API reachability verified (Preview)!');
