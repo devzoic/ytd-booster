@@ -72,9 +72,22 @@ pub fn get_engine_launch_target(app_handle: &AppHandle) -> Result<(PathBuf, Vec<
         "yt-node"
     };
 
-    // 1. Development mode: use python directory
+    // 1. Development mode: run live python source directly so changes are immediate
     if let Some(py_dir) = find_dev_python_dir() {
-        // Check if compiled binary exists in dist/ or desktop binaries/
+        let py_cmd = if cfg!(target_os = "windows") {
+            let venv_py = py_dir.join("venv/Scripts/python.exe");
+            if venv_py.exists() { venv_py.to_string_lossy().to_string() } else { "python".to_string() }
+        } else {
+            let venv_py = py_dir.join("venv/bin/python3");
+            if venv_py.exists() { venv_py.to_string_lossy().to_string() } else { "python3".to_string() }
+        };
+
+        // If run.py exists, always use live script in dev
+        if py_dir.join("run.py").exists() {
+            return Ok((PathBuf::from(py_cmd), vec!["run.py".to_string()], py_dir));
+        }
+
+        // Fallback to compiled dist binary in dev
         let dist_binary = py_dir.join("dist").join(binary_name);
         if dist_binary.exists() {
             return Ok((dist_binary, vec![], py_dir));
@@ -84,17 +97,6 @@ pub fn get_engine_launch_target(app_handle: &AppHandle) -> Result<(PathBuf, Vec<
         if sidecar_binary.exists() {
             return Ok((sidecar_binary, vec![], py_dir));
         }
-
-        // Fallback in dev: run python directly
-        let py_cmd = if cfg!(target_os = "windows") {
-            let venv_py = py_dir.join("venv/Scripts/python.exe");
-            if venv_py.exists() { venv_py.to_string_lossy().to_string() } else { "python".to_string() }
-        } else {
-            let venv_py = py_dir.join("venv/bin/python3");
-            if venv_py.exists() { venv_py.to_string_lossy().to_string() } else { "python3".to_string() }
-        };
-
-        return Ok((PathBuf::from(py_cmd), vec!["run.py".to_string()], py_dir));
     }
 
     // 2. Production mode: check resource_dir and bundle paths
