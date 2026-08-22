@@ -45,31 +45,9 @@ const SettingsPage = {
           </button>
         </div>
 
-        <!-- Section 2: Ngrok Public Tunnel -->
+        <!-- Section 2: Engine Config -->
         <div class="card-section">
           <div class="card-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-            </svg>
-            <span>Ngrok Tunnel Settings</span>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Ngrok Auth Token</label>
-            <div class="input-wrapper">
-              <input type="password" class="form-input" id="setting-ngrok-token" placeholder="Paste from dashboard.ngrok.com">
-              <button class="input-btn" id="btn-toggle-ngrok-token">👁</button>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Static Ngrok Domain</label>
-            <input type="text" class="form-input" id="setting-ngrok-domain" placeholder="https://your-domain.ngrok-free.dev">
-          </div>
-
-          <!-- Section 3: Engine Config -->
-          <div class="card-title" style="margin-top: 24px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2">
               <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
               <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
@@ -133,7 +111,6 @@ const SettingsPage = {
     };
 
     bind('btn-toggle-laravel-token', () => this.togglePassword('setting-laravel-token'));
-    bind('btn-toggle-ngrok-token', () => this.togglePassword('setting-ngrok-token'));
     bind('btn-test-connection', () => this.testConnection());
     bind('btn-reset-defaults', () => this.resetDefaults());
     bind('btn-save-settings', () => this.saveSettings());
@@ -160,8 +137,6 @@ const SettingsPage = {
           LARAVEL_API_URL: 'http://youtube.test/api',
           LARAVEL_API_TOKEN: '',
           SAAS_DEVICE_KEY: '',
-          NGROK_AUTHTOKEN: '',
-          NGROK_DOMAIN: '',
           PORT: '8008',
           DEBUG: 'True'
         };
@@ -177,8 +152,6 @@ const SettingsPage = {
       setVal('setting-laravel-url', this.currentEnv.LARAVEL_API_URL);
       setVal('setting-laravel-token', this.currentEnv.LARAVEL_API_TOKEN);
       setVal('setting-device-key', this.currentEnv.SAAS_DEVICE_KEY);
-      setVal('setting-ngrok-token', this.currentEnv.NGROK_AUTHTOKEN);
-      setVal('setting-ngrok-domain', this.currentEnv.NGROK_DOMAIN);
       setVal('setting-port', this.currentEnv.PORT || '8008');
 
       const debugEl = document.getElementById('setting-debug');
@@ -208,8 +181,6 @@ const SettingsPage = {
       const laravelUrl = document.getElementById('setting-laravel-url')?.value.trim() || '';
       const laravelToken = document.getElementById('setting-laravel-token')?.value.trim() || '';
       const deviceKey = document.getElementById('setting-device-key')?.value.trim() || '';
-      const ngrokToken = document.getElementById('setting-ngrok-token')?.value.trim() || '';
-      const ngrokDomain = document.getElementById('setting-ngrok-domain')?.value.trim() || '';
       const port = document.getElementById('setting-port')?.value.trim() || '8008';
       const debug = document.getElementById('setting-debug')?.checked ? 'True' : 'False';
 
@@ -218,8 +189,6 @@ const SettingsPage = {
         LARAVEL_API_URL: laravelUrl,
         LARAVEL_API_TOKEN: laravelToken,
         SAAS_DEVICE_KEY: deviceKey,
-        NGROK_AUTHTOKEN: ngrokToken,
-        NGROK_DOMAIN: ngrokDomain,
         PORT: port,
         DEBUG: debug,
       };

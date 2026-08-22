@@ -59,21 +59,12 @@ class PollerService:
         """Poll the Laravel server for eligible jobs."""
         import socket
         clean_hostname = socket.gethostname().split(".")[0]
-        
-        # Detect active API URL (ngrok static domain or local fallback)
-        api_url = settings.NGROK_DOMAIN or settings.NGROK_URL or ""
-        if not api_url:
-            try:
-                from app.services.device_registrar import detect_active_ngrok_url
-                api_url = detect_active_ngrok_url()
-            except Exception:
-                pass
 
         url = f"{settings.LARAVEL_API_URL.rstrip('/')}/device/poll"
         payload = {
             "device_key": settings.SAAS_DEVICE_KEY,
             "device_name": clean_hostname,
-            "api_url": api_url,
+            "api_url": "",
             "available_workers": available_workers
         }
         

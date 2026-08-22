@@ -53,7 +53,9 @@ def create_app() -> FastAPI:
         # Start background poller service
         import asyncio
         from app.services.poller_service import poller_service
+        from app.services.command_dispatcher import command_dispatcher
         asyncio.create_task(poller_service.start())
+        asyncio.create_task(command_dispatcher.start())
     
     @application.on_event("shutdown")
     async def shutdown_event():
@@ -69,6 +71,12 @@ def create_app() -> FastAPI:
             await poller_service.stop()
         except Exception as e:
             logger.error(f"Error stopping poller service: {e}")
+
+        try:
+            from app.services.command_dispatcher import command_dispatcher
+            await command_dispatcher.stop()
+        except Exception as e:
+            logger.error(f"Error stopping command dispatcher: {e}")
     
     return application
 

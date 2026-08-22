@@ -54,7 +54,7 @@ hidden_imports = [
     'websockets.legacy',
     'websockets.legacy.server',
     'websockets.legacy.client',
-    'pyngrok',
+
     'jinja2',
     'psutil',
     'selenium',

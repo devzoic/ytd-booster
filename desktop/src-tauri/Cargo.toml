@@ -1,6 +1,6 @@
 [package]
 name = "yt-booster"
-version = "1.1.0"
+version = "1.2.0"
 description = "YT Booster Desktop Application"
 authors = ["YT Booster"]
 edition = "2021"

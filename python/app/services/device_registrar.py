@@ -245,10 +245,6 @@ def register_device_with_laravel(public_url: str = "") -> dict:
         logger.warning("LARAVEL_API_URL not configured. Skipping device auto-registration.")
         return {"success": False, "message": "No LARAVEL_API_URL"}
 
-    # Auto-detect ngrok URL if not passed explicitly
-    if not public_url:
-        public_url = detect_active_ngrok_url()
-
     device_data = get_device_registration_payload(api_url=public_url)
 
     # Ensure URL ends with /devices/register
