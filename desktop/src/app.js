@@ -22,11 +22,27 @@ const App = {
 
   async init() {
     await this.loadPortConfig();
+    this.loadAppVersion();
     this.setupNavigation();
     this.setupEngineToggle();
     this.setupTauriEvents();
     this.navigate('dashboard');
     this.checkInitialStatus();
+  },
+
+  async loadAppVersion() {
+    try {
+      if (window.__TAURI__ && window.__TAURI__.app) {
+        const version = await window.__TAURI__.app.getVersion();
+        const el = document.getElementById('app-version');
+        if (el) el.textContent = `v${version}`;
+        // Also update settings page version if visible
+        const settingsVer = document.getElementById('update-current-version');
+        if (settingsVer) settingsVer.textContent = `v${version}`;
+      }
+    } catch (e) {
+      console.warn('[App] Could not get app version:', e);
+    }
   },
 
   async loadPortConfig() {

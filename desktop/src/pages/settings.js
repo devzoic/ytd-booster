@@ -1,5 +1,6 @@
 /**
  * Settings Page (.env Editor)
+ * All button handlers use addEventListener (no inline onclick) for CSP compatibility.
  */
 const SettingsPage = {
   currentEnv: {},
@@ -27,7 +28,7 @@ const SettingsPage = {
             <label class="form-label">API Token (Optional)</label>
             <div class="input-wrapper">
               <input type="password" class="form-input" id="setting-laravel-token" placeholder="Bearer Token">
-              <button class="input-btn" onclick="SettingsPage.togglePassword('setting-laravel-token')">👁</button>
+              <button class="input-btn" id="btn-toggle-laravel-token">👁</button>
             </div>
           </div>
 
@@ -36,7 +37,7 @@ const SettingsPage = {
             <input type="text" class="form-input" id="setting-device-key" placeholder="dev_key_...">
           </div>
 
-          <button class="btn btn-ghost" style="width: 100%; justify-content: center;" onclick="SettingsPage.testConnection()">
+          <button class="btn btn-ghost" style="width: 100%; justify-content: center;" id="btn-test-connection">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
@@ -58,7 +59,7 @@ const SettingsPage = {
             <label class="form-label">Ngrok Auth Token</label>
             <div class="input-wrapper">
               <input type="password" class="form-input" id="setting-ngrok-token" placeholder="Paste from dashboard.ngrok.com">
-              <button class="input-btn" onclick="SettingsPage.togglePassword('setting-ngrok-token')">👁</button>
+              <button class="input-btn" id="btn-toggle-ngrok-token">👁</button>
             </div>
           </div>
 
@@ -123,7 +124,7 @@ const SettingsPage = {
             <div style="font-weight: 600; font-size: 13px;">Current Version</div>
             <div style="font-size: 12px; color: var(--text-muted);" id="update-current-version">v1.1.0</div>
           </div>
-          <button class="btn btn-ghost" id="btn-check-updates" onclick="SettingsPage.checkForUpdates()">
+          <button class="btn btn-ghost" id="btn-check-updates">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="23 4 23 10 17 10"/>
               <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -139,8 +140,8 @@ const SettingsPage = {
               <div id="update-progress-bar" style="width: 0%; height: 100%; background: var(--accent-green, #22c55e); border-radius: 4px; transition: width 0.3s ease;"></div>
             </div>
           </div>
-          <div id="update-actions" style="display: none; margin-top: 10px; display: flex; gap: 8px;">
-            <button class="btn btn-primary" id="btn-install-update" onclick="SettingsPage.installUpdate()">
+          <div id="update-actions" style="display: none; margin-top: 10px;">
+            <button class="btn btn-primary" id="btn-install-update">
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/>
@@ -165,10 +166,10 @@ const SettingsPage = {
 
       <!-- Action Bar -->
       <div style="display: flex; justify-content: flex-end; gap: 14px; margin-top: 10px;">
-        <button class="btn btn-ghost" onclick="SettingsPage.resetDefaults()">
+        <button class="btn btn-ghost" id="btn-reset-defaults">
           <span>Reset Defaults</span>
         </button>
-        <button class="btn btn-primary" id="btn-save-settings" onclick="SettingsPage.saveSettings()">
+        <button class="btn btn-primary" id="btn-save-settings">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
             <polyline points="17 21 17 13 7 13 7 21"/>
@@ -181,6 +182,20 @@ const SettingsPage = {
   },
 
   async init() {
+    // Wire up ALL button handlers via addEventListener (CSP-safe)
+    const bind = (id, handler) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('click', handler);
+    };
+
+    bind('btn-toggle-laravel-token', () => this.togglePassword('setting-laravel-token'));
+    bind('btn-toggle-ngrok-token', () => this.togglePassword('setting-ngrok-token'));
+    bind('btn-test-connection', () => this.testConnection());
+    bind('btn-check-updates', () => this.checkForUpdates());
+    bind('btn-install-update', () => this.installUpdate());
+    bind('btn-reset-defaults', () => this.resetDefaults());
+    bind('btn-save-settings', () => this.saveSettings());
+
     await this.loadEnv();
   },
 
@@ -280,19 +295,13 @@ const SettingsPage = {
         await window.__TAURI__.core.invoke('write_env', { settings: updated });
         App.port = parseInt(updated.PORT, 10) || 8008;
         this.currentEnv = updated;
-        Toast.success('Settings saved to .env successfully!');
-        
-        // Auto restart engine with new settings
-        Toast.info('Applying new settings to engine...');
-        await App.stopEngine();
-        await App.startEngine();
+        Toast.success('Settings saved successfully!');
       } else {
-        App.port = parseInt(updated.PORT, 10) || 8008;
         this.currentEnv = updated;
-        Toast.success('Settings saved (Preview Mode)!');
+        Toast.success('Settings saved (Preview Mode)');
       }
     } catch (e) {
-      console.error('[SettingsPage] Failed to save settings:', e);
+      console.error('[SettingsPage] Save failed:', e);
       Toast.error(`Failed to save settings: ${e}`);
     } finally {
       if (btn) {
@@ -303,18 +312,23 @@ const SettingsPage = {
   },
 
   async testConnection() {
-    const url = document.getElementById('setting-laravel-url').value.trim();
-    if (!url) {
-      Toast.error('Please enter a Laravel API URL first.');
-      return;
+    const btn = document.getElementById('btn-test-connection');
+    const originalHTML = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg class="btn-icon spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        <span>Testing...</span>
+      `;
     }
 
-    Toast.info(`Testing connection to ${url}...`);
     try {
       if (window.__TAURI__ && window.__TAURI__.core) {
-        const res = await window.__TAURI__.core.invoke('test_connection', { url });
+        const res = await window.__TAURI__.core.invoke('test_connection');
         if (res.success) {
-          Toast.success(`Connected! Server responded with HTTP ${res.status_code}`);
+          Toast.success(res.message || 'Connection successful!');
         } else {
           Toast.error(`Connection failed: ${res.error || 'HTTP ' + res.status_code}`);
         }
@@ -323,6 +337,11 @@ const SettingsPage = {
       }
     } catch (e) {
       Toast.error(`Connection test failed: ${e}`);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+      }
     }
   },
 
@@ -374,7 +393,7 @@ const SettingsPage = {
       } else {
         statusDiv.style.background = 'rgba(99,102,241,0.08)';
         statusDiv.style.borderColor = 'rgba(99,102,241,0.2)';
-        statusText.textContent = result.error ? `Update check failed: ${result.error}` : '✓ You are running the latest version!';
+        statusText.textContent = result.error ? `Update check failed: ${result.error}` : '\u2713 You are running the latest version!';
         actionsDiv.style.display = 'none';
       }
     } catch (e) {
@@ -415,7 +434,7 @@ const SettingsPage = {
 
     try {
       const result = await window.__TAURI__.core.invoke('download_and_install_update');
-      if (statusText) statusText.innerHTML = '<strong>✓ Update installed!</strong> Restart the app to apply the update.';
+      if (statusText) statusText.innerHTML = '<strong>\u2713 Update installed!</strong> Restart the app to apply the update.';
       if (btn) {
         btn.innerHTML = `
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -425,11 +444,11 @@ const SettingsPage = {
           <span>Restart Now</span>
         `;
         btn.disabled = false;
-        btn.onclick = async () => {
+        btn.addEventListener('click', async () => {
           if (window.__TAURI__ && window.__TAURI__.core) {
             await window.__TAURI__.core.invoke('plugin:process|restart');
           }
-        };
+        });
       }
       if (progressWrap) progressWrap.style.display = 'none';
       Toast.success('Update downloaded and installed! Restart to apply.');
